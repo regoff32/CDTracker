@@ -30,7 +30,9 @@ them the APK is signed with a temporary debug key.
 
 ## Version
 
-5.0.0 - change `versionName`/`versionCode` in `android/app/build.gradle`
-and `VERSION` in `cdtracker_core.py` together.
+5.0.2 - the Debian and Android apps always share the same version number,
+even when only one of them changed. Change `versionName`/`versionCode` in
+`android/app/build.gradle` and `VERSION` in `cdtracker_core.py` together
+(versionCode = 5.0.2 -> 50002).
 
 See `README.txt` for step-by-step install instructions.
