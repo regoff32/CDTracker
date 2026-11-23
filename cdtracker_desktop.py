@@ -199,9 +199,11 @@ def run_gui(store):
     btns.pack(side="bottom", fill="x", pady=(8, 0), before=bottom)
     edit_b = ttk.Button(btns, text="Edit selected")
     del_b = ttk.Button(btns, text="Delete selected")
+    all_b = ttk.Button(btns, text="Select all")
     edit_b.pack(side="left")
     del_b.pack(side="left", padx=6)
-    ttk.Label(btns, text="Tip: press Enter in the Cash box to add.",
+    all_b.pack(side="left")
+    ttk.Label(btns, text="Tip: Enter in Cash adds · Ctrl+click picks several",
               style="Hint.TLabel").pack(side="right")
 
     # ---------------- History tab ----------------
@@ -422,19 +424,37 @@ def run_gui(store):
         if not sel:
             messagebox.showinfo(APP_NAME, "Select a line first.", parent=root)
             return
+        if len(sel) > 1:
+            messagebox.showinfo(APP_NAME, "Select just one line to edit.",
+                                parent=root)
+            return
         edit_dialog(int(sel[0]), refresh)
+
+    def select_all(_e=None):
+        kids = tree.get_children()
+        tree.selection_set(kids)
+        if kids:
+            tree.focus_set()
+        return "break"
 
     def delete_current():
         sel = tree.selection()
         if not sel:
             messagebox.showinfo(APP_NAME, "Select a line first.", parent=root)
             return
-        _id, d, n, c, _dep = B().get(int(sel[0]))
-        if messagebox.askyesno(
-                APP_NAME, f"Delete {n}  {money(c)}  ({show_date(d)})?",
-                parent=root):
-            eid = int(sel[0])
-            save(lambda b: store.write(lambda bk: bk.delete(eid)))
+        ids = [int(i) for i in sel]
+        if len(ids) == 1:
+            _id, d, n, c, _dep = B().get(ids[0])
+            q = f"Delete {n}  {money(c)}  ({show_date(d)})?"
+        else:
+            total = sum(B().get(i)[3] for i in ids)
+            q = (f"Delete these {len(ids)} lines ({money(total)} total)?"
+                 "\n\nThis can't be undone.")
+        if messagebox.askyesno(APP_NAME, q, parent=root):
+            def do(bk):
+                for i in ids:
+                    bk.delete(i)
+            save(lambda b: store.write(do))
 
     def edit_history(_e=None):
         dsel = dtree.selection()
@@ -555,6 +575,8 @@ def run_gui(store):
     date_e.bind("<Return>", lambda e: name_e.focus_set())
     tree.bind("<Double-1>", edit_current)
     tree.bind("<Delete>", lambda e: delete_current())
+    tree.bind("<Control-a>", select_all)
+    all_b.config(command=select_all)
     edit_b.config(command=edit_current)
     del_b.config(command=delete_current)
     dep_b.config(command=make_deposit)
