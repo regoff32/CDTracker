@@ -66,6 +66,10 @@ In the window:
 - File > NAS settings... changes the NAS address or login.
 - Select all / Ctrl+click / Shift+click to pick several lines, then
   Delete selected.
+- File > Import from CSV... adds entries and deposits from a CSV laid
+  out like File > Export (DATE, NAME, CASH, TOTAL, with a
+  "*** DEPOSIT ***" line after each deposit). It shows a summary first
+  and warns if the deposits are already in CDTracker.
 - Help > About shows the version.
 
 Without the .deb: from the source folder, run  bash install-debian.sh

@@ -23,7 +23,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 APP_NAME = "CDTracker"
-VERSION = "5.0.3"
+VERSION = "5.0.4"
 DEFAULT_TARGET = Decimal("200.00")
 
 CONFIG_DIR = os.path.join(
@@ -228,6 +228,70 @@ class CashBook:
             "SELECT d.id, d.dep_date, d.total_cents, COUNT(e.id), d.note "
             "FROM deposits d LEFT JOIN entries e ON e.deposit_id=d.id "
             "GROUP BY d.id ORDER BY d.dep_date DESC, d.id DESC").fetchall()
+
+    @staticmethod
+    def read_csv(path):
+        """Read a CSV laid out like Export (DATE, NAME, CASH, TOTAL with
+        a "*** DEPOSIT ***" line after each batch). TOTAL is ignored and
+        worked out again. Returns (deposits, current) where deposits is
+        a list of (iso_date, note, [(iso_date, name, cents), ...]) and
+        current is the list of entries after the last deposit line.
+        Raises ValueError naming the line if anything can't be read."""
+        deposits, batch = [], []
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            rows = list(csv.reader(f))
+        for n, row in enumerate(rows, start=1):
+            row = [c.strip() for c in row] + ["", "", "", ""]
+            d, name, cash = row[0], row[1], row[2]
+            if not any(row[:4]):
+                continue
+            if n == 1 and d.upper() == "DATE":
+                continue
+            try:
+                if name.upper().startswith("*** DEPOSIT ***"):
+                    note = name[len("*** DEPOSIT ***"):].strip()
+                    if not batch:
+                        raise ValueError("deposit line with no entries before it")
+                    deposits.append((parse_date(d), note, batch))
+                    batch = []
+                    continue
+                if not name:
+                    raise ValueError("no name")
+                batch.append((parse_date(d), name, to_cents(cash)))
+            except ValueError as ex:
+                raise ValueError(f"Line {n} of the file: {ex}")
+        return deposits, batch
+
+    def import_batches(self, deposits, current):
+        """Add deposits (with their entries) and current entries, all at
+        once - either everything goes in or nothing does."""
+        try:
+            for dep_date, note, entries in deposits:
+                total = sum(c for _d, _n, c in entries)
+                cur = self.db.execute(
+                    "INSERT INTO deposits (dep_date, total_cents, note) "
+                    "VALUES (?,?,?)", (dep_date, total, note))
+                self.db.executemany(
+                    "INSERT INTO entries (ent_date, name, cents, deposit_id) "
+                    "VALUES (?,?,?,?)",
+                    [(d, nm, c, cur.lastrowid) for d, nm, c in entries])
+            self.db.executemany(
+                "INSERT INTO entries (ent_date, name, cents) VALUES (?,?,?)",
+                current)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def matching_deposits(self, deposits):
+        """How many of these deposits (same date and amount) already exist."""
+        n = 0
+        for dep_date, _note, entries in deposits:
+            total = sum(c for _d, _n, c in entries)
+            if self.db.execute("SELECT 1 FROM deposits WHERE dep_date=? AND "
+                               "total_cents=?", (dep_date, total)).fetchone():
+                n += 1
+        return n
 
     def export_csv(self, path):
         """Everything, laid out like the paper form: entries, then a

@@ -341,6 +341,8 @@ def run_gui(store):
     # ---------------- Menu ----------------
     menubar = tk.Menu(root)
     filem = tk.Menu(menubar, tearoff=0)
+    filem.add_command(label="Import from CSV...",
+                      command=lambda: import_csv())
     filem.add_command(label="Export all to CSV...",
                       command=lambda: export())
     filem.add_command(label="Set deposit target...",
@@ -648,6 +650,49 @@ def run_gui(store):
         if path:
             B().export_csv(path)
             messagebox.showinfo(APP_NAME, f"Saved:\n{path}", parent=root)
+
+    def import_csv():
+        path = filedialog.askopenfilename(
+            parent=root, title="Import from CSV",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*")])
+        if not path:
+            return
+        try:
+            deps, cur_entries = store.book.read_csv(path)
+        except (ValueError, OSError) as ex:
+            messagebox.showerror(APP_NAME, f"Can't import that file.\n\n{ex}",
+                                 parent=root)
+            return
+        if not deps and not cur_entries:
+            messagebox.showinfo(APP_NAME, "That file has no entries.",
+                                parent=root)
+            return
+        n_ent = sum(len(e) for _d, _n, e in deps)
+        dep_total = sum(c for _d, _n, e in deps for _x, _y, c in e)
+        cur_total = sum(c for _d, _n, c in cur_entries)
+        msg = (f"This adds:\n\n"
+               f"  {len(deps)} deposits  ({n_ent} entries, {money(dep_total)})\n"
+               f"  {len(cur_entries)} entries to Current  ({money(cur_total)})")
+        if deps:
+            msg += (f"\n\nDeposits from {show_date(min(d for d, _n, _e in deps))}"
+                    f" to {show_date(max(d for d, _n, _e in deps))}.")
+        dupes = store.book.matching_deposits(deps)
+        if dupes:
+            msg += (f"\n\nWARNING: {dupes} of these deposits (same date and "
+                    "amount) are already in CDTracker. This file may have "
+                    "been imported before.")
+        if B().batch(None) and cur_entries:
+            msg += ("\n\nCurrent already has entries; the imported ones "
+                    "will be added to them.")
+        if not messagebox.askyesno(APP_NAME, msg + "\n\nImport now?",
+                                   parent=root,
+                                   icon="warning" if dupes else "question"):
+            return
+        ok, _ = save(lambda b: store.write(
+            lambda bk: bk.import_batches(deps, cur_entries)))
+        if ok:
+            messagebox.showinfo(APP_NAME, "Import finished and saved to "
+                                "the NAS.", parent=root)
 
     def set_target():
         v = simpledialog.askstring(
