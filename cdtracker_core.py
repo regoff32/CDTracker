@@ -23,7 +23,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 APP_NAME = "CDTracker"
-VERSION = "5.0.2"
+VERSION = "5.0.3"
 DEFAULT_TARGET = Decimal("200.00")
 
 CONFIG_DIR = os.path.join(
@@ -279,6 +279,22 @@ def save_config(nas, username=None, password=None, domain=""):
             if domain:
                 f.write(f"domain = {domain}\n")
         os.chmod(AUTH_FILE, 0o600)
+
+
+def load_auth():
+    """(username, password) saved for the NAS, or ("", "")."""
+    user = pw = ""
+    try:
+        with open(AUTH_FILE) as f:
+            for line in f:
+                k, _, v = line.partition("=")
+                if k.strip() == "username":
+                    user = v.strip()
+                elif k.strip() == "password":
+                    pw = v.strip()
+    except OSError:
+        pass
+    return user, pw
 
 
 def is_set_up():

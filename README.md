@@ -8,7 +8,7 @@ One data file on the NAS (SMB share over Tailscale) is shared by:
 
 | Part | Folder / file |
 |------|---------------|
-| Debian desktop app (Tk) | `cdtracker_desktop.py`, `install-debian.sh` |
+| Debian desktop app (Tk) | `cdtracker_desktop.py`; `.deb` built by `packaging/build-deb.sh` |
 | Android app (APK) | `android/` - built by GitHub Actions |
 | Android via Termux (alternative) | `cdtracker_android.py`, `install-android.sh` |
 | Shared phone screen | `web/index.html` (used by the APK and Termux) |
@@ -18,11 +18,10 @@ Every change downloads the latest file from the NAS, applies the change,
 and uploads it again, so all devices see the same data. If the NAS
 can't be reached, nothing is saved and the app says so.
 
-## Getting the APK
+## Getting the APK and .deb
 
-Every push that changes `android/` or `web/` builds a signed APK and
-attaches it to **Releases** (tag `v<version>`). Download it on the phone
-and install.
+Every push that changes the apps builds a signed APK and the Debian
+`.deb` and attaches both to **Releases** (tag `v<version>`).
 
 Signing uses four repository secrets: `CDT_KEYSTORE_BASE64`,
 `CDT_KEYSTORE_PASSWORD`, `CDT_KEY_ALIAS`, `CDT_KEY_PASSWORD`. Without
@@ -30,9 +29,9 @@ them the APK is signed with a temporary debug key.
 
 ## Version
 
-5.0.2 - the Debian and Android apps always share the same version number,
+5.0.3 - the Debian and Android apps always share the same version number,
 even when only one of them changed. Change `versionName`/`versionCode` in
 `android/app/build.gradle` and `VERSION` in `cdtracker_core.py` together
-(versionCode = 5.0.2 -> 50002).
+(versionCode = 5.0.3 -> 50003). The build stops if the two don't match.
 
 See `README.txt` for step-by-step install instructions.

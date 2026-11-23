@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK and Debian package
 
 on:
   push:
@@ -6,6 +6,9 @@ on:
     paths:
       - 'android/**'
       - 'web/**'
+      - '*.py'
+      - 'packaging/**'
+      - 'README.txt'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
@@ -53,10 +56,22 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           cp android/app/build/outputs/apk/release/app-release.apk "CDTracker-$VERSION.apk"
 
+      - name: Build Debian package
+        run: |
+          DEB=$(sh packaging/build-deb.sh)
+          echo "DEB=$DEB" >> "$GITHUB_ENV"
+          DEB_VERSION=$(dpkg-deb -f "$DEB" Version)
+          if [ "$DEB_VERSION" != "$VERSION" ]; then
+            echo "::error::Version mismatch: Android $VERSION, Debian $DEB_VERSION. Change both together."
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
-          name: CDTracker-${{ env.VERSION }}-apk
-          path: CDTracker-${{ env.VERSION }}.apk
+          name: CDTracker-${{ env.VERSION }}
+          path: |
+            CDTracker-${{ env.VERSION }}.apk
+            ${{ env.DEB }}
 
       - name: Publish to Releases
         env:
@@ -64,9 +79,9 @@ jobs:
         run: |
           TAG="v$VERSION"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "CDTracker-$VERSION.apk" --clobber
+            gh release upload "$TAG" "CDTracker-$VERSION.apk" "$DEB" --clobber
           else
-            gh release create "$TAG" "CDTracker-$VERSION.apk" \
+            gh release create "$TAG" "CDTracker-$VERSION.apk" "$DEB" \
               --title "CDTracker $VERSION" \
-              --notes "Android app. Download the .apk on your phone and open it to install."
+              --notes "Android: download the .apk on the phone and open it to install. Debian: download the .deb and install it with: sudo apt install ./$(basename "$DEB")"
           fi

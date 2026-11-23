@@ -29,29 +29,47 @@ empty file on the NAS instead.
 
 1. DEBIAN
 ---------
-Copy CDTracker-5.0.0.tar.gz to the computer, then in a terminal:
+Easiest: the .deb package.
 
-  cd ~/Downloads
-  tar xzf CDTracker-5.0.0.tar.gz
-  cd CDTracker
-  ./install-debian.sh
+a) Download cdtracker_x.x.x_all.deb from
+     https://github.com/regoff32/CDTracker/releases
+   (or use the one in the CDTracker package zip).
+b) In a terminal, from the folder it's in:
 
-- It installs python3-tk and smbclient if they're missing (asks for
-  your sudo password).
-- It asks for the NAS address, username and password, then tests them.
-  "OK - connected" means you're done.
-- It replaces the old "Cash Deposit Tracker" menu item with
-  "CDTracker". The old program is removed. Its data moves to the
-  NAS the first time you open CDTracker.
+     sudo apt install ./cdtracker_5.0.3_all.deb
 
-Open "CDTracker" from the applications menu.
+   apt also installs what it needs (python3-tk, smbclient).
+c) Open "CDTracker" from the applications menu. The first time on a
+   computer, a NAS settings window asks for:
+     NAS address : your NAS's Tailscale IP (100.x.x.x)
+     Share       : notes
+     Folder      : Backups/CDTracker Backup
+     File name   : cdtracker.db
+     Username / Password : your TrueNAS SMB login
+   Click "Save & connect". (A computer that was already set up
+   keeps its settings and skips this.)
 
-New in the window:
-- A status line at the bottom: green = saved on NAS, red = NAS not
+To update: install the newer .deb the same way.
+To remove:  sudo apt remove cdtracker   (data on the NAS is untouched)
+
+If this computer had the older install-debian.sh version, remove its
+copy first so the menu uses the .deb one (settings are kept):
+
+     rm -f ~/.local/bin/cdtracker ~/.local/share/applications/cdtracker.desktop
+     rm -rf ~/.local/share/cdtracker/app
+
+In the window:
+- Status line at the bottom: green = saved on NAS, red = NAS not
   reachable.
-- File > Refresh from NAS (or F5) to get the latest copy, e.g. after
+- File > Refresh from NAS (or F5) gets the latest copy, e.g. after
   using the Android app.
+- File > NAS settings... changes the NAS address or login.
+- Select all / Ctrl+click / Shift+click to pick several lines, then
+  Delete selected.
 - Help > About shows the version.
+
+Without the .deb: from the source folder, run  bash install-debian.sh
+(installs just for your user).
 
 
 2. ANDROID APP (APK) - recommended
@@ -120,8 +138,8 @@ Tips on Android:
 
 CHANGING THE NAS PASSWORD OR ADDRESS
 ------------------------------------
-Debian or Termux:
-  cdtracker --setup
+Debian: File > NAS settings...   (or in a terminal: cdtracker --setup)
+Termux: cdtracker --setup
 
 Settings live in ~/.config/cdtracker/ (the password file can only be
 read by your user).

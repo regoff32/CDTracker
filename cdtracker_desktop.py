@@ -11,7 +11,94 @@ from datetime import date, datetime
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 from cdtracker_core import (APP_NAME, VERSION, Store, SyncError,  # noqa: E402
                             is_set_up, setup_terminal, parse_date, to_cents,
-                            money, show_date)
+                            money, show_date, load_config, save_config,
+                            load_auth, NAS_DEFAULTS)
+
+
+def setup_window(parent=None):
+    """NAS settings window. Returns True once it connects and saves."""
+    import tkinter as tk
+    from tkinter import ttk, messagebox
+
+    own = parent is None
+    win = tk.Tk() if own else tk.Toplevel(parent)
+    win.title(f"{APP_NAME} - NAS settings")
+    win.resizable(False, False)
+    if not own:
+        win.transient(parent)
+
+    nas = load_config()
+    user, old_pw = load_auth()
+    f = ttk.Frame(win, padding=14)
+    f.pack()
+    ttk.Label(f, text="Where CDTracker keeps its data",
+              font=("TkDefaultFont", 12, "bold")).grid(
+        row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+    fields = [("server", "NAS address (Tailscale IP)", nas["server"]),
+              ("share", "Share", nas["share"]),
+              ("folder", "Folder", nas["folder"]),
+              ("file", "File name", nas["file"]),
+              ("user", "Username", user),
+              ("password", "Password", "")]
+    vars_ = {}
+    for r, (key, label, val) in enumerate(fields, start=1):
+        ttk.Label(f, text=label).grid(row=r, column=0, sticky="w", pady=3,
+                                      padx=(0, 10))
+        v = tk.StringVar(value=val)
+        e = ttk.Entry(f, textvariable=v, width=34, font=("TkDefaultFont", 12),
+                      show="*" if key == "password" else "")
+        e.grid(row=r, column=1, sticky="w", pady=3)
+        vars_[key] = v
+        if r == 1:
+            e.focus_set()
+    if old_pw:
+        ttk.Label(f, text="Leave the password empty to keep the saved one.",
+                  foreground="#5d6670").grid(row=len(fields) + 1, column=1,
+                                             sticky="w")
+    ttk.Label(f, text="Tailscale must be connected.",
+              foreground="#5d6670").grid(row=len(fields) + 2, column=1,
+                                         sticky="w")
+    result = {"ok": False}
+
+    def save(_e=None):
+        new = {k: vars_[k].get().strip().strip("/") for k in NAS_DEFAULTS}
+        u = vars_["user"].get().strip()
+        pw = vars_["password"].get() or old_pw
+        if not new["server"] or not u or not pw:
+            messagebox.showerror(APP_NAME, "Enter the NAS address, username "
+                                 "and password.", parent=win)
+            return
+        for k in NAS_DEFAULTS:
+            new[k] = new[k] or NAS_DEFAULTS[k]
+        save_config(new, u, pw)
+        win.config(cursor="watch")
+        win.update_idletasks()
+        try:
+            Store().pull()
+        except SyncError as ex:
+            win.config(cursor="")
+            messagebox.showerror(APP_NAME, f"Couldn't connect.\n\n{ex}",
+                                 parent=win)
+            return
+        win.config(cursor="")
+        result["ok"] = True
+        win.destroy()
+
+    bf = ttk.Frame(f)
+    bf.grid(row=len(fields) + 3, column=0, columnspan=2, sticky="e",
+            pady=(12, 0))
+    ttk.Button(bf, text="Cancel", command=win.destroy).pack(side="right")
+    ttk.Button(bf, text="Save & connect", command=save).pack(side="right",
+                                                             padx=6)
+    win.bind("<Return>", save)
+    win.bind("<Escape>", lambda e: win.destroy())
+    if own:
+        win.mainloop()
+    else:
+        win.wait_visibility()
+        win.grab_set()
+        parent.wait_window(win)
+    return result["ok"]
 
 
 def run_gui(store):
@@ -262,6 +349,8 @@ def run_gui(store):
     nas = store.nas
     filem.add_command(label="Refresh from NAS  (F5)",
                       command=lambda: pull_now())
+    filem.add_command(label="NAS settings...",
+                      command=lambda: nas_settings())
     filem.add_command(
         label=f"Data: //{nas['server']}/{nas['share']}/{nas['folder']}/"
               f"{nas['file']}", state="disabled")
@@ -304,6 +393,11 @@ def run_gui(store):
             root.config(cursor="")
         refresh()
         return ok, r
+
+    def nas_settings():
+        if setup_window(root):
+            store.nas = load_config()
+            pull_now()
 
     def pull_now(_e=None):
         root.config(cursor="watch")
@@ -604,17 +698,16 @@ def main():
     if "--version" in sys.argv:
         print(f"{APP_NAME} {VERSION}")
         return
-    if "--setup" in sys.argv or not is_set_up():
-        if not sys.stdin.isatty() and not is_set_up():
-            sys.exit("CDTracker isn't set up. Run in a terminal: cdtracker --setup")
-        rc = setup_terminal()
-        if "--setup" in sys.argv:
-            sys.exit(rc)
+    if "--setup" in sys.argv and sys.stdin.isatty():
+        sys.exit(setup_terminal())
     try:
         import tkinter  # noqa: F401
     except ImportError:
         sys.exit("tkinter is missing. Install it with:\n"
                  "  sudo apt install python3-tk")
+    if "--setup" in sys.argv or not is_set_up():
+        if not setup_window():
+            return
     store = Store()
     try:
         store.pull()
