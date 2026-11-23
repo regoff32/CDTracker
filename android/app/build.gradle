@@ -1,0 +1,70 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.goffcomputer.cdtracker'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.goffcomputer.cdtracker'
+        minSdk 26
+        targetSdk 34
+        versionCode 50000
+        versionName '5.0.0'
+    }
+
+    // Release signing comes from GitHub secrets (see .github/workflows).
+    // Without them the APK is signed with a throwaway debug key.
+    def ks = System.getenv('CDT_KEYSTORE')
+    signingConfigs {
+        release {
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('CDT_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('CDT_KEY_ALIAS')
+                keyPassword System.getenv('CDT_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig ks ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // The phone screen is the same web/index.html the Termux version uses.
+    sourceSets {
+        main {
+            assets.srcDir('../../web')
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE*',
+                         'META-INF/NOTICE*', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF',
+                         'META-INF/*.kotlin_module']
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'com.hierynomus:smbj:0.13.0'
+}

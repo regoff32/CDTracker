@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3b57">
+<title>CDTracker</title>
+<style>
+  :root{--ink:#1b1f24;--muted:#5d6670;--line:#d9dee3;--bg:#f4f6f8;--card:#fff;
+        --brand:#1f3b57;--accent:#2a6bc4;--good:#0a7a0a;--bad:#b00020}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--brand);color:#fff;padding:12px 16px 0;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:19px;display:flex;justify-content:space-between;align-items:center}
+  header h1 small{font-weight:400;opacity:.75;font-size:13px}
+  .tabs{display:flex;margin-top:10px}
+  .tabs button{flex:1;background:none;border:0;color:#cfd9e4;font:600 15px system-ui;padding:10px;
+    border-bottom:3px solid transparent}
+  .tabs button.on{color:#fff;border-color:#fff}
+  main{padding:12px 12px 120px;max-width:720px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+  label{display:block;font-size:13px;color:var(--muted);margin:6px 0 3px}
+  input{width:100%;font-size:17px;padding:10px;border:1px solid #b9c1c9;border-radius:8px;background:#fff;color:var(--ink)}
+  .row{display:flex;gap:8px}
+  .row>div{flex:1}
+  .row>div.cash{flex:0 0 34%}
+  button.primary{width:100%;margin-top:10px;background:var(--accent);color:#fff;border:0;
+    border-radius:8px;font:600 17px system-ui;padding:12px}
+  button.ghost{background:#fff;border:1px solid #b9c1c9;border-radius:8px;padding:10px 14px;font:500 15px system-ui;color:var(--ink)}
+  button.danger{background:#fff;border:1px solid var(--bad);color:var(--bad);border-radius:8px;padding:10px 14px;font:500 15px system-ui}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th{font-size:12px;color:var(--muted);text-align:left;padding:6px 4px;border-bottom:2px solid var(--line)}
+  td{padding:10px 4px;border-bottom:1px solid var(--line)}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.d{white-space:nowrap;color:var(--muted);font-size:14px}
+  tr.tap{cursor:pointer}
+  tr.tap:active{background:#eef3fa}
+  .empty{color:var(--muted);text-align:center;padding:18px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;z-index:5}
+  .bar .tot{flex:1}
+  .bar .big{font-size:24px;font-weight:700}
+  .bar .big.ready{color:var(--good)}
+  .bar .hint{font-size:13px;color:var(--muted)}
+  .bar button{background:var(--brand);color:#fff;border:0;border-radius:10px;font:700 16px system-ui;padding:12px 16px}
+  .bar button:disabled{opacity:.4}
+  .status{font-size:13px;margin:0 0 10px;padding:8px 10px;border-radius:8px;background:#e7f3e7;color:var(--good)}
+  .status.off{background:#fbe9ec;color:var(--bad)}
+  .dep{display:flex;justify-content:space-between;align-items:center}
+  .dep b{font-variant-numeric:tabular-nums}
+  .dep .sub{font-size:13px;color:var(--muted)}
+  .detail{margin-top:8px}
+  dialog{border:0;border-radius:14px;padding:16px;width:min(92vw,420px)}
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  dialog h2{margin:0 0 6px;font-size:19px}
+  .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+  .btns .primary{width:auto;margin:0}
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:#222;color:#fff;
+    padding:10px 14px;border-radius:8px;font-size:14px;max-width:90vw;display:none;z-index:9}
+  .foot{display:flex;gap:8px;justify-content:space-between;margin-top:6px}
+  .hidden{display:none}
+  .working{position:fixed;inset:0;background:rgba(255,255,255,.55);display:none;align-items:center;
+    justify-content:center;z-index:20;font:600 17px system-ui;color:var(--brand)}
+  .note{font-size:13px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>CDTracker <small id="ver"></small></h1>
+  <div class="tabs">
+    <button id="tCur" class="on">Current</button>
+    <button id="tHist">Deposit History</button>
+  </div>
+</header>
+
+<main>
+  <div id="status" class="status">Loading…</div>
+
+  <section id="pCur">
+    <div class="card">
+      <div class="row">
+        <div><label for="fDate">Date</label><input id="fDate" type="date"></div>
+        <div class="cash"><label for="fCash">Cash</label>
+          <input id="fCash" inputmode="decimal" placeholder="0.00"></div>
+      </div>
+      <label for="fName">Name</label>
+      <input id="fName" autocomplete="off" autocapitalize="words" enterkeyhint="done">
+      <button class="primary" id="bAdd">Add</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>DATE</th><th>NAME</th><th class="n">CASH</th><th class="n">TOTAL</th></tr></thead>
+        <tbody id="curRows"></tbody>
+      </table>
+      <div class="hint" style="font-size:13px;color:var(--muted);margin-top:8px">Tap a line to edit or delete it.</div>
+    </div>
+  </section>
+
+  <section id="pHist" class="hidden">
+    <div id="depList"></div>
+  </section>
+
+  <div class="foot">
+    <button class="ghost" id="bRefresh">Refresh</button>
+    <button class="ghost" id="bTarget">Target…</button>
+    <button class="ghost hidden" id="bSettings">Settings</button>
+    <button class="ghost" id="bQuit">Quit</button>
+  </div>
+</main>
+
+<div class="bar">
+  <div class="tot"><div class="big" id="total">$0.00</div><div class="hint" id="hint"></div></div>
+  <button id="bDeposit" disabled>Make Deposit</button>
+</div>
+
+<dialog id="dEdit">
+  <h2>Edit entry</h2>
+  <label>Date</label><input id="eDate" type="date">
+  <label>Name</label><input id="eName" autocapitalize="words">
+  <label>Cash</label><input id="eCash" inputmode="decimal">
+  <div class="btns">
+    <button class="danger" id="eDel">Delete</button>
+    <span style="flex:1"></span>
+    <button class="ghost" id="eCancel">Cancel</button>
+    <button class="primary" id="eSave">Save</button>
+  </div>
+</dialog>
+
+<dialog id="dDep">
+  <h2 id="depTitle">Make Deposit</h2>
+  <div id="depWarn" class="hint" style="color:var(--bad);font-size:14px"></div>
+  <label>Deposit date</label><input id="dDate" type="date">
+  <label>Note (optional)</label><input id="dNote" placeholder="bank, slip #">
+  <div class="btns">
+    <button class="ghost" id="dCancel">Cancel</button>
+    <button class="primary" id="dOk">Deposit</button>
+  </div>
+</dialog>
+
+<dialog id="dTarget">
+  <h2>Deposit target</h2>
+  <label>Deposit when the total reaches</label><input id="tAmt" inputmode="decimal">
+  <div class="btns">
+    <button class="ghost" id="tCancel">Cancel</button>
+    <button class="primary" id="tOk">Save</button>
+  </div>
+</dialog>
+
+<dialog id="dSet">
+  <h2>NAS settings</h2>
+  <label>NAS address (Tailscale IP)</label><input id="sServer" placeholder="100.x.x.x" inputmode="url" autocapitalize="off">
+  <label>Share</label><input id="sShare" autocapitalize="off">
+  <label>Folder</label><input id="sFolder" autocapitalize="off">
+  <label>File name</label><input id="sFile" autocapitalize="off">
+  <label>Username</label><input id="sUser" autocapitalize="off" autocomplete="off">
+  <label>Password</label><input id="sPass" type="password" autocomplete="off">
+  <div class="note">Tailscale must be connected. The password stays on this device.</div>
+  <div class="btns">
+    <button class="ghost" id="sCancel">Cancel</button>
+    <button class="primary" id="sOk">Save &amp; connect</button>
+  </div>
+</dialog>
+
+<div class="working" id="working">Talking to the NAS…</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const money = c => "$" + (c/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+let S = null, editing = null, openDep = null, busy = false;
+
+function toast(msg, ms=2600){ const t=$("toast"); t.textContent=msg; t.style.display="block";
+  clearTimeout(toast.h); toast.h=setTimeout(()=>t.style.display="none", ms); }
+
+async function api(path, body){
+  if (busy) return null;
+  busy = true; document.body.style.cursor="wait";
+  try{
+    if (window.CDT){            // Android app: built-in NAS connection
+      $("working").style.display = "flex";
+      await new Promise(r => setTimeout(r, 40));   // let the screen update first
+      return JSON.parse(CDT.call(path, body===undefined ? null : JSON.stringify(body)));
+    }
+    const r = body===undefined ? await fetch(path)
+      : await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","X-CDTracker":"1"},body:JSON.stringify(body)});
+    return await r.json();
+  }catch(e){ toast(window.CDT ? "Error: " + e : "CDTracker isn't running. Start it again from Termux."); return null; }
+  finally{ busy=false; document.body.style.cursor=""; $("working").style.display="none"; }
+}
+
+function render(st){
+  if (!st) return;
+  if (st.needSetup){
+    $("ver").textContent = "v" + st.version;
+    $("status").textContent = st.status; $("status").className = "status off";
+    openSettings();
+    return;
+  }
+  if (st.current === undefined){ if (st.error) toast(st.error, 4500); return; }
+  S = st;
+  $("ver").textContent = "v" + st.version;
+  const s = $("status");
+  s.textContent = st.status; s.className = "status" + (st.online ? "" : " off");
+  if (st.error) toast(st.error, 4500);
+
+  const rows = st.current.map((e,i) =>
+    `<tr class="tap" data-id="${e.id}"><td class="d">${e.show.slice(0,5)}</td><td>${esc(e.name)}</td>`+
+    `<td class="n">${money(e.cents)}</td><td class="n">${money(e.run)}</td></tr>`).join("");
+  $("curRows").innerHTML = rows || `<tr><td colspan="4" class="empty">No cash entered since the last deposit.</td></tr>`;
+  document.querySelectorAll("#curRows tr.tap").forEach(tr => tr.onclick = () => openEdit(+tr.dataset.id));
+
+  $("total").textContent = "Total: " + money(st.total);
+  const ready = st.total >= st.target;
+  $("total").className = "big" + (ready ? " ready" : "");
+  $("hint").textContent = ready ? `Ready to deposit (target ${money(st.target)})`
+                                : `${money(st.target - st.total)} to go until ${money(st.target)}`;
+  $("bDeposit").disabled = st.total <= 0;
+
+  $("depList").innerHTML = st.deposits.length ? st.deposits.map(d =>
+    `<div class="card"><div class="dep tap" data-id="${d.id}"><div><div><b>${d.show}</b></div>`+
+    `<div class="sub">${d.count} entr${d.count==1?"y":"ies"}${d.note? " · "+esc(d.note):""}</div></div>`+
+    `<b>${money(d.cents)}</b></div><div class="detail hidden" id="det${d.id}"></div></div>`).join("")
+    : `<div class="card empty">No deposits yet.</div>`;
+  document.querySelectorAll("#depList .dep").forEach(el => el.onclick = () => toggleDep(+el.dataset.id));
+  if (openDep) toggleDep(openDep, true);
+}
+
+async function toggleDep(id, force){
+  const box = $("det"+id); if (!box) { openDep=null; return; }
+  if (!force && !box.classList.contains("hidden")) { box.classList.add("hidden"); openDep=null; return; }
+  const r = await api("/api/deposit/"+id); if (!r) return;
+  openDep = id;
+  box.innerHTML = `<table><thead><tr><th>DATE</th><th>NAME</th><th class="n">CASH</th><th class="n">TOTAL</th></tr></thead><tbody>`+
+    r.entries.map(e => `<tr class="tap" data-id="${e.id}"><td class="d">${e.show.slice(0,5)}</td><td>${esc(e.name)}</td>`+
+      `<td class="n">${money(e.cents)}</td><td class="n">${money(e.run)}</td></tr>`).join("") +
+    `</tbody></table><div class="btns"><button class="danger" data-undo="${id}">Undo this deposit</button></div>`;
+  box.classList.remove("hidden");
+  box.querySelectorAll("tr.tap").forEach(tr => tr.onclick = () => {
+    const e = r.entries.find(x => x.id == tr.dataset.id); openEdit(e.id, e); });
+  box.querySelector("[data-undo]").onclick = async () => {
+    const d = S.deposits.find(x => x.id==id);
+    if (!confirm(`Undo the ${money(d.cents)} deposit from ${d.show}?\n\nIts entries go back to the Current list.`)) return;
+    openDep = null;
+    render(await api("/api/undo",{id}));
+  };
+}
+
+function openEdit(id, entry){
+  const e = entry || S.current.find(x => x.id === id); if (!e) return;
+  editing = e.id;
+  $("eDate").value = e.date; $("eName").value = e.name; $("eCash").value = (e.cents/100).toFixed(2);
+  $("dEdit").showModal();
+}
+
+$("bAdd").onclick = async () => {
+  const name = $("fName").value.trim(), cash = $("fCash").value.trim();
+  if (!name) return toast("Enter a name.");
+  if (!cash) return toast("Enter an amount.");
+  const st = await api("/api/add",{date:$("fDate").value, name, cash});
+  if (!st) return;
+  const saved = !st.error;
+  render(st);
+  if (saved){ $("fName").value=""; $("fCash").value=""; toast("Added " + name); }
+};
+$("fName").addEventListener("keydown", e => { if (e.key==="Enter") $("fCash").focus(); });
+$("fCash").addEventListener("keydown", e => { if (e.key==="Enter") $("bAdd").click(); });
+
+$("eCancel").onclick = () => $("dEdit").close();
+$("eSave").onclick = async () => {
+  const st = await api("/api/update",{id:editing,date:$("eDate").value,name:$("eName").value,cash:$("eCash").value});
+  if (st && !st.error) $("dEdit").close();
+  render(st);
+};
+$("eDel").onclick = async () => {
+  if (!confirm(`Delete ${$("eName").value} ${$("eCash").value}?`)) return;
+  const st = await api("/api/delete",{id:editing});
+  $("dEdit").close(); render(st);
+};
+
+$("bDeposit").onclick = () => {
+  $("depTitle").textContent = "Deposit " + money(S.total) + "?";
+  $("depWarn").textContent = S.total < S.target ? `That's under the ${money(S.target)} target.` : "";
+  $("dDate").value = today(); $("dNote").value = "";
+  $("dDep").showModal();
+};
+$("dCancel").onclick = () => $("dDep").close();
+$("dOk").onclick = async () => {
+  const amt = S.total;
+  const st = await api("/api/deposit",{date:$("dDate").value, note:$("dNote").value});
+  if (!st) return;
+  $("dDep").close(); render(st);
+  if (!st.error) toast(`Deposit of ${money(amt)} recorded. Starting over at $0.00.`, 3500);
+};
+
+$("bTarget").onclick = () => { $("tAmt").value = (S.target/100).toFixed(2); $("dTarget").showModal(); };
+$("tCancel").onclick = () => $("dTarget").close();
+$("tOk").onclick = async () => { const st = await api("/api/target",{amount:$("tAmt").value});
+  if (st && !st.error) $("dTarget").close(); render(st); };
+
+$("bRefresh").onclick = async () => { render(await api("/api/state")); toast("Up to date"); };
+$("bQuit").onclick = async () => {
+  if (!confirm("Close CDTracker?")) return;
+  if (window.CDT) return CDT.quit();
+  await api("/api/quit",{});
+  document.body.innerHTML = '<main><div class="card empty">CDTracker is closed. You can close this tab.</div></main>';
+};
+
+async function openSettings(){
+  if (!window.CDT) return;
+  const c = await api("/api/settings"); if (!c) return;
+  $("sServer").value = c.server; $("sShare").value = c.share; $("sFolder").value = c.folder;
+  $("sFile").value = c.file; $("sUser").value = c.user; $("sPass").value = "";
+  $("sPass").placeholder = c.hasPassword ? "(unchanged)" : "";
+  if (!$("dSet").open) $("dSet").showModal();
+}
+$("bSettings").onclick = openSettings;
+$("sCancel").onclick = () => $("dSet").close();
+$("sOk").onclick = async () => {
+  const body = {server:$("sServer").value, share:$("sShare").value, folder:$("sFolder").value,
+                file:$("sFile").value, user:$("sUser").value, password:$("sPass").value};
+  if (!body.server.trim() || !body.user.trim()) return toast("Enter the NAS address and username.");
+  const st = await api("/api/settings", body);
+  if (!st) return;
+  if (!st.error && !st.needSetup){ $("dSet").close(); toast("Connected to the NAS"); }
+  render(st);
+};
+
+function tab(cur){
+  $("tCur").classList.toggle("on",cur); $("tHist").classList.toggle("on",!cur);
+  $("pCur").classList.toggle("hidden",!cur); $("pHist").classList.toggle("hidden",cur);
+}
+$("tCur").onclick = () => tab(true);
+$("tHist").onclick = () => tab(false);
+
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible" && !busy) render(await api("/api/state"));
+});
+
+$("fDate").value = today();
+if (window.CDT) $("bSettings").classList.remove("hidden");
+api("/api/state").then(render);
+</script>
+</body>
+</html>
