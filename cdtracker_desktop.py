@@ -21,8 +21,8 @@ def run_gui(store):
     root = tk.Tk()
     root.title(f"{APP_NAME} {VERSION} - Goff Computer")
     B = lambda: store.book  # noqa: E731
-    root.geometry("760x620")
-    root.minsize(640, 480)
+    root.geometry("820x700")
+    root.minsize(700, 520)
 
     style = ttk.Style()
     if "clam" in style.theme_names():
@@ -171,7 +171,7 @@ def run_gui(store):
     cols = ("date", "name", "cash", "total")
     mid = ttk.Frame(cur)
     mid.pack(fill="both", expand=True, pady=8)
-    tree = ttk.Treeview(mid, columns=cols, show="headings", height=12)
+    tree = ttk.Treeview(mid, columns=cols, show="headings", height=8)
     for c, label, w, anchor in (("date", "DATE", 100, "center"),
                                 ("name", "NAME", 300, "w"),
                                 ("cash", "CASH", 100, "e"),
@@ -185,7 +185,9 @@ def run_gui(store):
     sb.pack(side="right", fill="y")
 
     bottom = ttk.Frame(cur)
-    bottom.pack(fill="x")
+    # Packed from the bottom up, before the list, so the total and the
+    # buttons always keep their room and the list takes what is left.
+    bottom.pack(side="bottom", fill="x", pady=(8, 0), before=mid)
     total_lbl = ttk.Label(bottom, text="", style="Big.TLabel")
     total_lbl.pack(side="left")
     hint_lbl = ttk.Label(bottom, text="", style="Hint.TLabel")
@@ -194,7 +196,7 @@ def run_gui(store):
     dep_b.pack(side="right")
 
     btns = ttk.Frame(cur)
-    btns.pack(fill="x", pady=(8, 0))
+    btns.pack(side="bottom", fill="x", pady=(8, 0), before=bottom)
     edit_b = ttk.Button(btns, text="Edit selected")
     del_b = ttk.Button(btns, text="Delete selected")
     edit_b.pack(side="left")
@@ -239,7 +241,7 @@ def run_gui(store):
     hpane.add(dbot, weight=1)
 
     hbtns = ttk.Frame(hist)
-    hbtns.pack(fill="x", pady=(8, 0))
+    hbtns.pack(side="bottom", fill="x", pady=(8, 0), before=hpane)
     hedit_b = ttk.Button(hbtns, text="Edit entry")
     undo_b = ttk.Button(hbtns, text="Undo deposit")
     exp_b = ttk.Button(hbtns, text="Export all to CSV...")
