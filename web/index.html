@@ -131,7 +131,6 @@
   <h2 id="depTitle">Make Deposit</h2>
   <div id="depWarn" class="hint" style="color:var(--bad);font-size:14px"></div>
   <label>Deposit date</label><input id="dDate" type="date">
-  <label>Note (optional)</label><input id="dNote" placeholder="bank, slip #">
   <div class="btns">
     <button class="ghost" id="dCancel">Cancel</button>
     <button class="primary" id="dOk">Deposit</button>
@@ -221,7 +220,7 @@ function render(st){
 
   $("depList").innerHTML = st.deposits.length ? st.deposits.map(d =>
     `<div class="card"><div class="dep tap" data-id="${d.id}"><div><div><b>${d.show}</b></div>`+
-    `<div class="sub">${d.count} entr${d.count==1?"y":"ies"}${d.note? " · "+esc(d.note):""}</div></div>`+
+    `<div class="sub">${d.count} entr${d.count==1?"y":"ies"}</div></div>`+
     `<b>${money(d.cents)}</b></div><div class="detail hidden" id="det${d.id}"></div></div>`).join("")
     : `<div class="card empty">No deposits yet.</div>`;
   document.querySelectorAll("#depList .dep").forEach(el => el.onclick = () => toggleDep(+el.dataset.id));
@@ -283,13 +282,13 @@ $("eDel").onclick = async () => {
 $("bDeposit").onclick = () => {
   $("depTitle").textContent = "Deposit " + money(S.total) + "?";
   $("depWarn").textContent = S.total < S.target ? `That's under the ${money(S.target)} target.` : "";
-  $("dDate").value = today(); $("dNote").value = "";
+  $("dDate").value = today();
   $("dDep").showModal();
 };
 $("dCancel").onclick = () => $("dDep").close();
 $("dOk").onclick = async () => {
   const amt = S.total;
-  const st = await api("/api/deposit",{date:$("dDate").value, note:$("dNote").value});
+  const st = await api("/api/deposit",{date:$("dDate").value});
   if (!st) return;
   $("dDep").close(); render(st);
   if (!st.error) toast(`Deposit of ${money(amt)} recorded. Starting over at $0.00.`, 3500);

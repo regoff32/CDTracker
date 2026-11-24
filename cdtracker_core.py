@@ -23,7 +23,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 APP_NAME = "CDTracker"
-VERSION = "5.0.4"
+VERSION = "5.0.5"
 DEFAULT_TARGET = Decimal("200.00")
 
 CONFIG_DIR = os.path.join(

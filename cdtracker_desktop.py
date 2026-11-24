@@ -301,14 +301,13 @@ def run_gui(store):
     hpane.pack(fill="both", expand=True)
 
     dtop = ttk.Frame(hpane)
-    dtree = ttk.Treeview(dtop, columns=("date", "count", "total", "note"),
+    dtree = ttk.Treeview(dtop, columns=("date", "count", "total"),
                          show="headings", height=8)
-    for c, label, w, anchor in (("date", "DEPOSIT DATE", 120, "center"),
-                                ("count", "ENTRIES", 80, "center"),
-                                ("total", "AMOUNT", 110, "e"),
-                                ("note", "NOTE", 300, "w")):
+    for c, label, w, anchor in (("date", "DEPOSIT DATE", 160, "center"),
+                                ("count", "ENTRIES", 120, "center"),
+                                ("total", "AMOUNT", 160, "e")):
         dtree.heading(c, text=label)
-        dtree.column(c, width=w, anchor=anchor, stretch=(c == "note"))
+        dtree.column(c, width=w, anchor=anchor, stretch=True)
     dsb = ttk.Scrollbar(dtop, orient="vertical", command=dtree.yview)
     dtree.configure(yscrollcommand=dsb.set)
     dtree.pack(side="left", fill="both", expand=True)
@@ -318,7 +317,9 @@ def run_gui(store):
     dbot = ttk.Frame(hpane)
     ttk.Label(dbot, text="Entries in selected deposit:",
               style="Hint.TLabel").pack(anchor="w", pady=(6, 2))
-    detail = ttk.Treeview(dbot, columns=cols, show="headings", height=8)
+    dlist = ttk.Frame(dbot)
+    dlist.pack(fill="both", expand=True)
+    detail = ttk.Treeview(dlist, columns=cols, show="headings", height=8)
     for c, label, w, anchor in (("date", "DATE", 100, "center"),
                                 ("name", "NAME", 300, "w"),
                                 ("cash", "CASH", 100, "e"),
@@ -326,7 +327,10 @@ def run_gui(store):
         detail.heading(c, text=label)
         detail.column(c, width=w, anchor=anchor, stretch=(c == "name"))
     detail.tag_configure("odd", background="#f3f3f3")
-    detail.pack(fill="both", expand=True)
+    detail_sb = ttk.Scrollbar(dlist, orient="vertical", command=detail.yview)
+    detail.configure(yscrollcommand=detail_sb.set)
+    detail.pack(side="left", fill="both", expand=True)
+    detail_sb.pack(side="right", fill="y")
     hpane.add(dbot, weight=1)
 
     hbtns = ttk.Frame(hist)
@@ -445,7 +449,7 @@ def run_gui(store):
         dtree.delete(*dtree.get_children())
         for dep_id, dd, total, n, note in B().deposits():
             dtree.insert("", "end", iid=str(dep_id),
-                         values=(show_date(dd), n, money(total), note or ""))
+                         values=(show_date(dd), n, money(total)))
         if select and dtree.exists(str(select)):
             dtree.selection_set(str(select))
         else:
@@ -584,15 +588,9 @@ def run_gui(store):
         ttk.Label(f, text=msg, font=("TkDefaultFont", 12, "bold")).grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
         dv = tk.StringVar(value=date.today().strftime("%m/%d/%Y"))
-        nv = tk.StringVar()
         ttk.Label(f, text="Deposit date").grid(row=1, column=0, sticky="w",
                                                pady=3)
         date_field(f, dv)[0].grid(row=1, column=1, sticky="w", pady=3)
-        ttk.Label(f, text="Note (optional)").grid(row=2, column=0,
-                                                  sticky="w", pady=3)
-        ttk.Entry(f, textvariable=nv, width=28,
-                  font=("TkDefaultFont", 12)).grid(row=2, column=1,
-                                                   sticky="w", pady=3)
         result = {}
 
         def ok(_e=None):
@@ -601,7 +599,6 @@ def run_gui(store):
             except ValueError as ex:
                 messagebox.showerror(APP_NAME, str(ex), parent=win)
                 return
-            result["note"] = nv.get().strip()
             win.destroy()
 
         bf = ttk.Frame(f)
@@ -617,7 +614,7 @@ def run_gui(store):
             return
         iso = result["iso"]
         ok, r = save(lambda b: store.write(
-            lambda bk: bk.make_deposit(iso, result["note"])))
+            lambda bk: bk.make_deposit(iso)))
         if not ok:
             return
         dep_id, amt = r
