@@ -499,7 +499,7 @@ def run_gui(store):
                       font=("TkDefaultFont", 12)).grid(
                 row=r, column=1, sticky="w", pady=3)
 
-        def save(_e=None):
+        def save_edit(_e=None):
             try:
                 nd, nn, nc = parse_date(dv.get()), nv.get(), to_cents(cv.get())
             except ValueError as ex:
@@ -514,9 +514,10 @@ def run_gui(store):
         bf = ttk.Frame(f)
         bf.grid(row=3, column=0, columnspan=2, pady=(10, 0), sticky="e")
         ttk.Button(bf, text="Cancel", command=win.destroy).pack(side="right")
-        ttk.Button(bf, text="Save", command=save).pack(side="right", padx=6)
-        win.bind("<Return>", save)
+        ttk.Button(bf, text="Save", command=save_edit).pack(side="right", padx=6)
+        win.bind("<Return>", save_edit)
         win.bind("<Escape>", lambda e: win.destroy())
+        win.wait_visibility()
         win.grab_set()
 
     def edit_current(_e=None):

@@ -10,8 +10,8 @@ android {
         applicationId 'com.goffcomputer.cdtracker'
         minSdk 26
         targetSdk 34
-        versionCode 50005
-        versionName '5.0.5'
+        versionCode 50006
+        versionName '5.0.6'
     }
 
     // Release signing comes from GitHub secrets (see .github/workflows).
